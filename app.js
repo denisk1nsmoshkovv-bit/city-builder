@@ -4,16 +4,16 @@ const BUILDINGS = {
     name: 'Дом',
     type: 'Жилое',
     icon: '🏠',
-    cost: 50,
-    baseIncome: 1,
-    basePopulation: 5,
+    cost: 45,
+    baseIncome: 1.2,
+    basePopulation: 6,
     baseHappiness: 0,
-    maxLevel: 3,
+    maxLevel: 4,
     colorClass: 'house',
-    description: 'Даёт жителей и небольшой стабильный доход.',
-    upgradeCost: [0, 70, 120],
-    incomeScale: [1, 1.75, 2.5],
-    populationScale: [1, 1.4, 1.8],
+    description: 'Тёплое жильё: основа роста населения и стабильной экономики.',
+    upgradeCost: [0, 75, 130, 210],
+    incomeScale: [1, 1.8, 2.8, 4],
+    populationScale: [1, 1.45, 2, 2.7],
     unlockPopulation: 0
   },
   shop: {
@@ -21,48 +21,50 @@ const BUILDINGS = {
     name: 'Магазин',
     type: 'Коммерция',
     icon: '🛍️',
-    cost: 100,
-    baseIncome: 3,
+    cost: 95,
+    baseIncome: 3.6,
     basePopulation: 0,
     baseHappiness: 0,
-    maxLevel: 3,
+    maxLevel: 4,
     colorClass: 'shop',
-    description: 'Основной источник монет. Требует жителей.',
-    upgradeCost: [0, 120, 180],
-    incomeScale: [1, 1.75, 2.5],
-    populationScale: [0, 0, 0],
-    unlockPopulation: 5
+    description: 'Коммерческая зона: приносит основной доход, требует жителей.',
+    upgradeCost: [0, 125, 200, 300],
+    incomeScale: [1, 1.9, 3, 4.4],
+    populationScale: [0, 0, 0, 0],
+    unlockPopulation: 6
   },
   park: {
     id: 'park',
     name: 'Парк',
     type: 'Общественное',
     icon: '🌳',
-    cost: 80,
+    cost: 70,
     baseIncome: 0,
     basePopulation: 0,
-    baseHappiness: 5,
-    maxLevel: 3,
+    baseHappiness: 6,
+    maxLevel: 4,
     colorClass: 'park',
-    description: 'Усиливает соседние здания и повышает уют.',
-    upgradeCost: [0, 90, 140],
-    incomeScale: [0, 0, 0],
-    populationScale: [0, 0, 0],
+    description: 'Зелёная зона: повышает уют и усиливает соседние здания.',
+    upgradeCost: [0, 85, 140, 220],
+    incomeScale: [0, 0, 0, 0],
+    populationScale: [0, 0, 0, 0],
     unlockPopulation: 0
   }
 };
 
-const SAVE_KEY = 'cozy-town-builder-v1';
+const SAVE_KEY = 'cozy-town-builder-v2';
 const GRID_SIZE = 7;
-const START_COINS = 220;
+const START_COINS = 250;
 
 const state = {
   coins: START_COINS,
   totalEarned: START_COINS,
   selectedBuildId: null,
   selectedTileId: null,
+  hoverTileId: null,
   lastSavedAt: null,
   tick: 0,
+  tileFx: {},
   tiles: createInitialTiles()
 };
 
@@ -106,9 +108,9 @@ function unlockCost(tile) {
   const center = 3;
   const distance = Math.abs(tile.row - center) + Math.abs(tile.col - center);
   if (distance <= 2) return 0;
-  if (distance === 3) return 150;
-  if (distance === 4) return 250;
-  return 400;
+  if (distance === 3) return 120;
+  if (distance === 4) return 200;
+  return 320;
 }
 
 function getTile(id) {
@@ -116,26 +118,29 @@ function getTile(id) {
 }
 
 function getNeighbors(tile) {
-  const dirs = [
-    [0, 1], [1, 0], [0, -1], [-1, 0]
-  ];
-  return dirs
-    .map(([dr, dc]) => getTile(`${tile.row + dr}-${tile.col + dc}`))
-    .filter(Boolean);
+  const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  return dirs.map(([dr, dc]) => getTile(`${tile.row + dr}-${tile.col + dc}`)).filter(Boolean);
 }
 
 function getBuildingStats(building) {
   const data = BUILDINGS[building.id];
-  const levelIndex = building.level - 1;
+  const levelIndex = Math.max(0, Math.min(data.maxLevel - 1, building.level - 1));
   const income = Math.round(data.baseIncome * data.incomeScale[levelIndex] * 10) / 10;
   const population = Math.round(data.basePopulation * data.populationScale[levelIndex]);
-  const happiness = data.id === 'park' ? 5 + (building.level - 1) * 3 : 0;
+  const happiness = data.id === 'park' ? data.baseHappiness + (building.level - 1) * 4 : 0;
   return { income, population, happiness };
 }
 
+function getParkAdjacency(tile) {
+  return getNeighbors(tile).filter(t => t?.building?.id === 'park').length;
+}
+
 function getParkBonusMultiplier(tile) {
-  const adjacentParks = getNeighbors(tile).filter(t => t?.building?.id === 'park').length;
-  return 1 + adjacentParks * 0.1;
+  const adjacentParks = getParkAdjacency(tile);
+  const levelBonus = getNeighbors(tile)
+    .filter(t => t?.building?.id === 'park')
+    .reduce((sum, t) => sum + (t.building.level - 1) * 0.02, 0);
+  return 1 + adjacentParks * 0.12 + levelBonus;
 }
 
 function computeEconomy() {
@@ -158,7 +163,7 @@ function computeEconomy() {
     income += tileIncome;
   }
 
-  const globalMultiplier = 1 + Math.min(0.25, happiness / 200);
+  const globalMultiplier = 1 + Math.min(0.35, happiness / 160);
   income = Math.round(income * globalMultiplier * 10) / 10;
 
   return { population, happiness, income };
@@ -174,6 +179,14 @@ function canBuild(buildingId) {
     return { ok: false, reason: `Нужно минимум ${data.unlockPopulation} жителей.` };
   }
   return { ok: true, reason: '' };
+}
+
+function markTileFx(tileId, fxClass) {
+  state.tileFx[tileId] = fxClass;
+  setTimeout(() => {
+    delete state.tileFx[tileId];
+    renderBoard();
+  }, 500);
 }
 
 function renderAll() {
@@ -197,48 +210,61 @@ function renderBuildMenu() {
   for (const building of Object.values(BUILDINGS)) {
     const availability = canBuild(building.id);
     const card = document.createElement('div');
-    card.className = 'build-card' + (state.selectedBuildId === building.id ? ' active' : '');
+    card.className = 'build-card' + (state.selectedBuildId === building.id ? ' active' : '') + (!availability.ok ? ' locked' : '');
     card.innerHTML = `
-      <div class="build-card__icon">${building.icon}</div>
-      <div>
-        <div class="build-card__title">${building.name}</div>
-        <div class="build-card__desc">${building.description}</div>
-        <div class="build-card__meta">
-          <span class="chip">🪙 ${building.cost}</span>
-          ${building.basePopulation ? `<span class="chip">👥 +${building.basePopulation}</span>` : ''}
-          ${building.baseIncome ? `<span class="chip">💸 +${building.baseIncome}/с</span>` : ''}
-          ${building.id === 'park' ? `<span class="chip">🌿 +бонус рядом</span>` : ''}
+      <div class="build-card__head">
+        <div class="build-card__icon">${building.icon}</div>
+        <div>
+          <div class="build-card__title">${building.name}</div>
+          <div class="build-card__desc">${building.type}</div>
         </div>
       </div>
-      <button class="build-card__button">${state.selectedBuildId === building.id ? 'Выбрано' : 'Выбрать'}</button>
+      <div class="build-card__meta">
+        <span class="chip">🪙 ${building.cost}</span>
+        ${building.basePopulation ? `<span class="chip">👥 +${building.basePopulation}</span>` : ''}
+        ${building.baseIncome ? `<span class="chip">💸 +${building.baseIncome}/с</span>` : ''}
+        ${building.id === 'park' ? `<span class="chip">✨ соседям +12%</span>` : ''}
+      </div>
+      <button class="build-card__button" ${availability.ok ? '' : 'disabled'}>${state.selectedBuildId === building.id ? 'Выбрано' : 'Выбрать'}</button>
     `;
-    card.querySelector('.build-card__button').addEventListener('click', () => {
+    const button = card.querySelector('.build-card__button');
+    button.addEventListener('click', () => {
       state.selectedBuildId = state.selectedBuildId === building.id ? null : building.id;
       state.selectedTileId = null;
       renderAll();
     });
-    card.title = availability.ok ? '' : availability.reason;
+    card.title = availability.ok ? building.description : availability.reason;
     els.buildMenu.appendChild(card);
   }
+
   if (!state.selectedBuildId) {
-    els.buildHint.textContent = 'Выбери постройку снизу и нажми на свободную клетку.';
+    els.buildHint.textContent = 'Выбери постройку и нажми на свободную клетку.';
   } else {
     const selected = BUILDINGS[state.selectedBuildId];
     const availability = canBuild(selected.id);
     els.buildHint.textContent = availability.ok
-      ? `Режим строительства: ${selected.name}. Нажми на свободную открытую клетку.`
+      ? `Режим строительства: ${selected.name}. Подсветка покажет валидные клетки.`
       : `Режим строительства: ${selected.name}. ${availability.reason}`;
   }
 }
 
 function renderBoard() {
   els.board.innerHTML = '';
+  const canCurrentBuild = state.selectedBuildId ? canBuild(state.selectedBuildId).ok : false;
+
   for (const tile of state.tiles) {
     const tileEl = document.createElement('button');
     tileEl.className = 'tile';
     if (!tile.unlocked) tileEl.classList.add('locked');
     if (state.selectedTileId === tile.id) tileEl.classList.add('selected');
-    if (state.selectedBuildId && tile.unlocked && !tile.building) tileEl.classList.add('available');
+    if (state.hoverTileId === tile.id) tileEl.classList.add('hovered');
+    if (state.tileFx[tile.id]) tileEl.classList.add(state.tileFx[tile.id]);
+
+    if (state.selectedBuildId && tile.unlocked && !tile.building) {
+      tileEl.classList.add('available');
+      tileEl.classList.add(canCurrentBuild ? 'valid-target' : 'invalid-target');
+    }
+
     tileEl.dataset.tileId = tile.id;
 
     if (!tile.unlocked) {
@@ -249,14 +275,31 @@ function renderBoard() {
       const data = BUILDINGS[building.id];
       const stats = getBuildingStats(building);
       const bonusPct = Math.round((getParkBonusMultiplier(tile) - 1) * 100);
+
+      const shadowEl = document.createElement('div');
+      shadowEl.className = 'building-shadow';
+      tileEl.appendChild(shadowEl);
+
       const buildingEl = document.createElement('div');
       buildingEl.className = `building ${data.colorClass} level-${building.level}`;
-      buildingEl.innerHTML = `<span class="building__level">${building.level}</span>`;
+      buildingEl.innerHTML = `<span class="building__level">${building.level}</span>${bonusPct ? `<span class="building__bonus">+${bonusPct}%</span>` : ''}`;
       tileEl.appendChild(buildingEl);
-      tileEl.title = `${data.name} • Уровень ${building.level} • Доход ${stats.income}${bonusPct ? ` (+${bonusPct}% рядом с парком)` : ''}`;
+
+      const parkAdj = getParkAdjacency(tile);
+      tileEl.title = `${data.name} • Ур. ${building.level} • Доход ${stats.income}/с${bonusPct ? ` (+${bonusPct}% от парка)` : ''}${parkAdj ? ` • Парков рядом: ${parkAdj}` : ''}`;
     }
 
     tileEl.addEventListener('click', () => handleTileClick(tile.id, tileEl));
+    tileEl.addEventListener('mouseenter', () => {
+      state.hoverTileId = tile.id;
+      renderBoard();
+    });
+    tileEl.addEventListener('mouseleave', () => {
+      if (state.hoverTileId === tile.id) {
+        state.hoverTileId = null;
+        renderBoard();
+      }
+    });
     els.board.appendChild(tileEl);
   }
 }
@@ -280,6 +323,8 @@ function renderBuildingPanel() {
   const stats = getBuildingStats(building);
   const nextUpgradeCost = building.level < data.maxLevel ? data.upgradeCost[building.level] : null;
   const neighborBonus = Math.round((getParkBonusMultiplier(tile) - 1) * 100);
+  const parkAdj = getParkAdjacency(tile);
+
   els.buildingPanel.className = 'building-panel';
   els.buildingPanel.innerHTML = `
     <div class="building-panel__header">
@@ -300,25 +345,25 @@ function renderBuildingPanel() {
         <div class="kpi__value">${stats.income}/с ${neighborBonus ? `(+${neighborBonus}%)` : ''}</div>
       </div>
       <div class="kpi">
-        <div class="kpi__label">Население</div>
-        <div class="kpi__value">${stats.population ? '+' + stats.population : '—'}</div>
+        <div class="kpi__label">Улучшение</div>
+        <div class="kpi__value">${nextUpgradeCost ? `🪙 ${nextUpgradeCost}` : 'MAX'}</div>
       </div>
       <div class="kpi">
-        <div class="kpi__label">Уют</div>
-        <div class="kpi__value">${stats.happiness ? '+' + stats.happiness : '—'}</div>
+        <div class="kpi__label">Парки рядом</div>
+        <div class="kpi__value">${parkAdj || '—'}</div>
       </div>
     </div>
 
     <div class="building-panel__actions">
       <button class="building-panel__button building-panel__button--primary" id="upgradeBtn">
-        ${nextUpgradeCost ? `⬆️ Улучшить за 🪙 ${nextUpgradeCost}` : 'Макс. уровень'}
+        ${nextUpgradeCost ? `⬆️ Улучшить` : 'Макс. уровень'}
       </button>
       <button class="building-panel__button building-panel__button--danger" id="demolishBtn">🧱 Снести</button>
     </div>
 
     <div class="building-panel__note">
       ${data.description}
-      ${building.id === 'park' ? ' Парк усиливает соседние клетки на 10% за каждый парк рядом.' : ''}
+      ${building.id === 'park' ? ' Каждый парк даёт +12% соседним зданиям и ещё +2% за уровень выше первого.' : ''}
     </div>
   `;
 
@@ -339,22 +384,22 @@ function renderGoals() {
 
   const goals = [
     {
-      done: buildingsCount >= 3,
+      done: buildingsCount >= 4,
       icon: '🏘️',
       title: 'Первые кварталы',
-      desc: `${buildingsCount}/3 зданий построено`
+      desc: `${buildingsCount}/4 зданий построено`
     },
     {
-      done: economy.population >= 15,
+      done: economy.population >= 24,
       icon: '👥',
       title: 'Растущее население',
-      desc: `${economy.population}/15 жителей`
+      desc: `${economy.population}/24 жителей`
     },
     {
-      done: unlockedCount >= 20,
+      done: unlockedCount >= 24,
       icon: '🗺️',
       title: 'Расширение города',
-      desc: `${unlockedCount}/20 клеток открыто`
+      desc: `${unlockedCount}/24 клеток открыто`
     }
   ];
 
@@ -400,8 +445,10 @@ function tryUnlockTile(tile, tileEl) {
     toast('Недостаточно монет для открытия клетки');
     return;
   }
+
   state.coins -= cost;
   tile.unlocked = true;
+  markTileFx(tile.id, 'unlock-fx');
   toast('Новая клетка открыта');
   spawnFloat(tileEl, `-${cost}🪙`);
   autosave();
@@ -417,11 +464,9 @@ function placeBuilding(tile, tileEl) {
   }
 
   state.coins -= data.cost;
-  tile.building = {
-    id: data.id,
-    level: 1
-  };
+  tile.building = { id: data.id, level: 1 };
   state.selectedTileId = tile.id;
+  markTileFx(tile.id, 'place-fx');
   spawnFloat(tileEl, `-${data.cost}🪙`);
   toast(`${data.name} построен`);
   autosave();
@@ -433,17 +478,21 @@ function upgradeSelectedBuilding() {
   if (!tile?.building) return;
   const building = tile.building;
   const data = BUILDINGS[building.id];
+
   if (building.level >= data.maxLevel) {
     toast('Максимальный уровень');
     return;
   }
+
   const cost = data.upgradeCost[building.level];
   if (state.coins < cost) {
     toast('Недостаточно монет для улучшения');
     return;
   }
+
   state.coins -= cost;
   building.level += 1;
+  markTileFx(tile.id, 'upgrade-fx');
   toast(`${data.name} улучшен до ${building.level} уровня`);
   const tileEl = document.querySelector(`[data-tile-id="${tile.id}"]`);
   if (tileEl) spawnFloat(tileEl, `⬆️ ${building.level}`);
@@ -454,11 +503,11 @@ function upgradeSelectedBuilding() {
 function demolishSelectedBuilding() {
   const tile = getTile(state.selectedTileId);
   if (!tile?.building) return;
+
   const building = tile.building;
   const data = BUILDINGS[building.id];
-
   const builtCost = data.cost + data.upgradeCost.slice(1, building.level).reduce((a, b) => a + b, 0);
-  const refund = Math.round(builtCost * 0.5);
+  const refund = Math.round(builtCost * 0.45);
 
   tile.building = null;
   state.coins += refund;
@@ -517,7 +566,7 @@ function autosave() {
 
 function saveGame(showToast = true) {
   const payload = {
-    version: 1,
+    version: 2,
     state
   };
   localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
@@ -526,12 +575,17 @@ function saveGame(showToast = true) {
 }
 
 function loadGame() {
-  const raw = localStorage.getItem(SAVE_KEY);
+  const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem('cozy-town-builder-v1');
   if (!raw) return false;
+
   try {
     const payload = JSON.parse(raw);
     if (!payload?.state?.tiles) return false;
+
     Object.assign(state, payload.state);
+    state.hoverTileId = null;
+    state.tileFx = {};
+    state.selectedBuildId = null;
     return true;
   } catch (e) {
     console.error('Save load error', e);
@@ -541,13 +595,17 @@ function loadGame() {
 
 function resetGame() {
   if (!window.confirm('Начать новую игру? Текущее сохранение будет удалено.')) return;
+
   localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem('cozy-town-builder-v1');
   state.coins = START_COINS;
   state.totalEarned = START_COINS;
   state.selectedBuildId = null;
   state.selectedTileId = null;
+  state.hoverTileId = null;
   state.lastSavedAt = null;
   state.tick = 0;
+  state.tileFx = {};
   state.tiles = createInitialTiles();
   renderAll();
   toast('Новая игра начата');
@@ -567,11 +625,13 @@ function init() {
   const loaded = loadGame();
   attachEvents();
   renderAll();
+
   if (loaded) {
     toast('Сохранение загружено');
   } else {
     toast('Добро пожаловать в уютный город');
   }
+
   setInterval(tickIncome, 1000);
 }
 
