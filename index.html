@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Cozy Town Builder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <div class="sky">
+      <div class="sun-moon"></div>
+      <div class="cloud cloud-a"></div>
+      <div class="cloud cloud-b"></div>
+      <div class="cloud cloud-c"></div>
+    </div>
+
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="brand__badge">🏙️</div>
+        <div>
+          <div class="brand__title">Cozy Town Builder</div>
+          <div class="brand__subtitle">Уютный градостроитель для Яндекс Игр</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__icon">🪙</span>
+          <div>
+            <div class="stat__label">Монеты</div>
+            <div class="stat__value" id="coinsValue">0</div>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat__icon">👥</span>
+          <div>
+            <div class="stat__label">Население</div>
+            <div class="stat__value" id="populationValue">0</div>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat__icon">💸</span>
+          <div>
+            <div class="stat__label">Доход / сек</div>
+            <div class="stat__value" id="incomeValue">0</div>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat__icon">🌿</span>
+          <div>
+            <div class="stat__label">Уют</div>
+            <div class="stat__value" id="happinessValue">0</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="board-wrap">
+        <div class="board-scene glass">
+          <div class="scene-decor">
+            <div class="scene-path"></div>
+            <div class="scene-bush bush-1"></div>
+            <div class="scene-bush bush-2"></div>
+            <div class="scene-bush bush-3"></div>
+          </div>
+          <div id="board" class="board" aria-label="Игровое поле"></div>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel glass">
+          <div class="panel__header">
+            <h2>Строительство</h2>
+            <button class="ghost-btn" id="clearBuildBtn">Снять выбор</button>
+          </div>
+          <div class="build-menu" id="buildMenu"></div>
+          <div class="hint" id="buildHint">Выбери постройку снизу и нажми на свободную клетку.</div>
+        </section>
+
+        <section class="panel glass">
+          <div class="panel__header">
+            <h2>Здание</h2>
+          </div>
+          <div id="buildingPanel" class="building-panel empty">
+            <div class="empty-state">
+              <div class="empty-state__emoji">✨</div>
+              <div class="empty-state__title">Ничего не выбрано</div>
+              <div class="empty-state__text">Нажми на построенное здание, чтобы улучшить его или снести.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel glass panel--small">
+          <div class="panel__header">
+            <h2>Прогресс</h2>
+          </div>
+          <div class="goals" id="goals"></div>
+        </section>
+      </aside>
+    </main>
+
+    <div class="bottom-bar glass">
+      <button class="action-btn" id="saveBtn">💾 Сохранить</button>
+      <button class="action-btn" id="resetBtn">↺ Новая игра</button>
+      <div class="bottom-bar__note">Игра сохраняется автоматически в браузере.</div>
+    </div>
+
+    <div id="toastLayer" class="toast-layer" aria-live="polite"></div>
+    <div id="floatLayer" class="float-layer" aria-hidden="true"></div>
+    <div id="dayNightOverlay" class="day-night-overlay"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
