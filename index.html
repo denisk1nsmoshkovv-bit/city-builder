@@ -13,6 +13,8 @@
       <div class="cloud cloud-a"></div>
       <div class="cloud cloud-b"></div>
       <div class="cloud cloud-c"></div>
+      <div class="bird bird-a"></div>
+      <div class="bird bird-b"></div>
     </div>
 
     <header class="topbar glass">
@@ -25,28 +27,28 @@
       </div>
 
       <div class="stats">
-        <div class="stat">
+        <div class="stat stat--coins">
           <span class="stat__icon">🪙</span>
           <div>
             <div class="stat__label">Монеты</div>
             <div class="stat__value" id="coinsValue">0</div>
           </div>
         </div>
-        <div class="stat">
+        <div class="stat stat--pop">
           <span class="stat__icon">👥</span>
           <div>
             <div class="stat__label">Население</div>
             <div class="stat__value" id="populationValue">0</div>
           </div>
         </div>
-        <div class="stat">
+        <div class="stat stat--income">
           <span class="stat__icon">💸</span>
           <div>
             <div class="stat__label">Доход / сек</div>
             <div class="stat__value" id="incomeValue">0</div>
           </div>
         </div>
-        <div class="stat">
+        <div class="stat stat--happy">
           <span class="stat__icon">🌿</span>
           <div>
             <div class="stat__label">Уют</div>
@@ -67,16 +69,18 @@
           </div>
           <div id="board" class="board" aria-label="Игровое поле"></div>
         </div>
+
+        
       </section>
 
-      <aside class="sidebar">
-        <section class="panel glass">
+            <aside class="sidebar">
+        <section class="panel glass build-panel-side">
           <div class="panel__header">
             <h2>Строительство</h2>
             <button class="ghost-btn" id="clearBuildBtn">Снять выбор</button>
           </div>
           <div class="build-menu" id="buildMenu"></div>
-          <div class="hint" id="buildHint">Выбери постройку снизу и нажми на свободную клетку.</div>
+          <div class="hint" id="buildHint">Выбери постройку и нажми на свободную клетку.</div>
         </section>
 
         <section class="panel glass">
@@ -104,7 +108,7 @@
     <div class="bottom-bar glass">
       <button class="action-btn" id="saveBtn">💾 Сохранить</button>
       <button class="action-btn" id="resetBtn">↺ Новая игра</button>
-      <div class="bottom-bar__note">Игра сохраняется автоматически в браузере.</div>
+      <div class="bottom-bar__note">Игра сохраняется автоматически в браузере (localStorage).</div>
     </div>
 
     <div id="toastLayer" class="toast-layer" aria-live="polite"></div>
