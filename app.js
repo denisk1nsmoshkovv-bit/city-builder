@@ -306,6 +306,7 @@ function renderBoard() {
       const cost = unlockCost(tile);
       tileEl.innerHTML = `<span class="tile__lock">🔒</span><span class="tile__cost">Открыть<br>🪙 ${cost}</span>`;
     } else if (tile.building) {
+      tileEl.classList.add('occupied');
       const building = tile.building;
       const data = BUILDINGS[building.id];
       const stats = getBuildingStats(building);
